@@ -1,0 +1,3 @@
+cloud_id           = "b1g..."
+folder_id          = "b1g..."
+static_bucket_name = "momo-static-<уникальный-суффикс>"

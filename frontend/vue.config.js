@@ -5,7 +5,5 @@ module.exports = defineConfig({
   devServer: {
     allowedHosts: 'all'
   },
-  publicPath: process.env.NODE_ENV === 'production'
-    ? '/momo-store/'
-    : '/'
+  publicPath: '/'
 })

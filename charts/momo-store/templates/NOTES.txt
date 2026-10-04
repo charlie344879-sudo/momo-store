@@ -1,0 +1,2 @@
+Momo Store установлен как релиз "{{ .Release.Name }}".
+Проверить: kubectl get pods,svc,ingress -l app.kubernetes.io/part-of=momo-store

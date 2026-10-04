@@ -1,0 +1,81 @@
+# Переменные CI/CD (Settings -> CI/CD -> Variables), masked:
+#   REGISTRY           - docker-реестр с путём, без схемы: host[:port][/path]
+#                        (Nexus: nxs.praktikum-services.tech:5000, YCR: cr.yandex/<registry_id>)
+#   REGISTRY_USER      - логин (Nexus: свой; YCR: oauth)
+#   REGISTRY_PASSWORD  - пароль (Nexus: сгенерированный на /token; YCR: OAuth-токен)
+
+stages:
+  - test
+  - build
+
+variables:
+  # SemVer: мажор.минор задаём вручную, патч = номер пайплайна
+  VERSION_MAJOR_MINOR: "1.0"
+  VERSION: "${VERSION_MAJOR_MINOR}.${CI_PIPELINE_IID}"
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ---------- test ----------
+test-backend:
+  stage: test
+  image: golang:1.23-alpine
+  script:
+    - cd backend
+    - go vet ./...
+    - go test -v ./...
+
+test-frontend:
+  stage: test
+  image: node:20-alpine
+  script:
+    - cd frontend
+    - npm ci
+    - npm run build   # тестов во фронте нет, сборка ловит ошибки TypeScript
+  cache:
+    key:
+      files: [frontend/package-lock.json]
+    paths: [frontend/node_modules/]
+
+# Диагностика: достучится ли раннер до реестра (запуск вручную)
+check-registry:
+  stage: test
+  image: curlimages/curl:8.10.1
+  when: manual
+  allow_failure: true
+  script:
+    - curl -sS -m 15 -o /dev/null -w "HTTP %{http_code}\n" "https://${REGISTRY%%/*}/v2/"
+
+# ---------- build ----------
+.kaniko:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - |
+      AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_PASSWORD" | base64 | tr -d '\n')
+      printf '{"auths":{"%s":{"auth":"%s"}}}' "${REGISTRY%%/*}" "$AUTH" > /kaniko/.docker/config.json
+
+build-backend:
+  extends: .kaniko
+  script:
+    - >
+      /kaniko/executor
+      --context "${CI_PROJECT_DIR}/backend"
+      --dockerfile "${CI_PROJECT_DIR}/backend/Dockerfile"
+      --destination "${REGISTRY}/momo-backend:${VERSION}"
+
+build-frontend:
+  extends: .kaniko
+  script:
+    - >
+      /kaniko/executor
+      --context "${CI_PROJECT_DIR}/frontend"
+      --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile"
+      --destination "${REGISTRY}/momo-frontend:${VERSION}"

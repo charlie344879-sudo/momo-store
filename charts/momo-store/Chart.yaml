@@ -1,0 +1,6 @@
+apiVersion: v2
+name: momo-store
+description: Momo Store (Пельменная №2) - frontend + backend
+type: application
+version: 0.1.0     # версия чарта, CI будет перезаписывать при публикации
+appVersion: "1.0.0" # версия приложения, по умолчанию используется как тег образов

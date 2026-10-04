@@ -1,0 +1,13 @@
+# Для локального kind: образы загружаются командой `kind load docker-image`
+backend:
+  replicas: 1
+  image:
+    repository: momo-backend
+    tag: dev
+    pullPolicy: Never
+frontend:
+  replicas: 1
+  image:
+    repository: momo-frontend
+    tag: dev
+    pullPolicy: Never

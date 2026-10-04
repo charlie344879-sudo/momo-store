@@ -1,0 +1,42 @@
+# Секрет для pull из приватного реестра (Nexus). Включается из CI через --set.
+# Для Yandex CR не нужен: ноды тянут образы по роли сервисного аккаунта.
+imageCredentials:
+  enabled: false
+  registry: ""   # host[:port] реестра
+  username: ""
+  password: ""
+
+backend:
+  replicas: 2
+  image:
+    repository: registry.example.com/momo-backend
+    tag: ""            # пусто -> Chart.appVersion
+    pullPolicy: IfNotPresent
+  port: 8081
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+frontend:
+  replicas: 2
+  image:
+    repository: registry.example.com/momo-frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+  port: 8080
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""   # пусто -> правило для любого хоста (доступ по IP)

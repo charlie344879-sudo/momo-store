@@ -16,3 +16,14 @@ vendor/
 .idea/
 .vscode/
 .DS_Store
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+
+# архивы с генерацией
+*.tar.gz
