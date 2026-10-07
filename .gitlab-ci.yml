@@ -9,11 +9,13 @@
 stages:
   - test
   - build
+  - deploy
 
 variables:
   # SemVer: мажор.минор задаём вручную, патч = номер пайплайна
   VERSION_MAJOR_MINOR: "1.0"
   VERSION: "${VERSION_MAJOR_MINOR}.${CI_PIPELINE_IID}"
+  CLUSTER_ID: "catfsljbv2qdf1i7t68s"
 
 workflow:
   rules:
@@ -83,3 +85,29 @@ build-frontend:
       --context "${CI_PROJECT_DIR}/frontend"
       --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile"
       --destination "${REGISTRY}/momo-frontend:${VERSION}"
+
+# ---------- deploy ----------
+deploy:
+  stage: deploy
+  image: alpine:3.20
+  needs: [build-backend, build-frontend]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - apk add --no-cache bash curl helm kubectl
+    - YC_VER=$(curl -sS https://storage.yandexcloud.net/yandexcloud-yc/release/stable)
+    - curl -sSL "https://storage.yandexcloud.net/yandexcloud-yc/release/${YC_VER}/linux/amd64/yc" -o /usr/local/bin/yc
+    - chmod +x /usr/local/bin/yc
+    - printf '%s' "$REGISTRY_PASSWORD_B64" | base64 -d > /tmp/key.json
+    - yc config set service-account-key /tmp/key.json
+    - yc managed-kubernetes cluster get-credentials --id "$CLUSTER_ID" --external
+    - >
+      helm upgrade --install momo charts/momo-store
+      -n momo --create-namespace --atomic --timeout 5m
+      --set backend.image.repository=${REGISTRY}/momo-backend
+      --set backend.image.tag=${VERSION}
+      --set frontend.image.repository=${REGISTRY}/momo-frontend
+      --set frontend.image.tag=${VERSION}
+      --set frontend.service.type=LoadBalancer
+      --set ingress.enabled=false
+    - kubectl -n momo get pods,svc
