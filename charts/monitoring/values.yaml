@@ -1,0 +1,19 @@
+# Namespace, в котором крутится приложение (для запросов на дашборде)
+appNamespace: momo
+
+prometheus:
+  image: quay.io/prometheus/prometheus:v2.55.1
+  retention: 2d          # данные хранятся в emptyDir, при перезапуске пода теряются
+  scrapeInterval: 15s
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+grafana:
+  image: docker.io/grafana/grafana:11.3.0
+  # обязателен: --set grafana.adminPassword=... (в CI берётся из переменной GRAFANA_ADMIN_PASSWORD)
+  adminPassword: ""
+  serviceType: LoadBalancer
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 300m, memory: 256Mi }
