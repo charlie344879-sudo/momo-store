@@ -35,6 +35,8 @@ frontend:
     limits:
       cpu: 200m
       memory: 64Mi
+  service:
+    type: ClusterIP
 
 ingress:
   enabled: true

@@ -30,7 +30,7 @@ resource "yandex_iam_service_account" "tfstate" {
 
 resource "yandex_resourcemanager_folder_iam_member" "tfstate_storage" {
   folder_id = var.folder_id
-  role      = "storage.editor"
+  role      = "storage.admin"
   member    = "serviceAccount:${yandex_iam_service_account.tfstate.id}"
 }
 

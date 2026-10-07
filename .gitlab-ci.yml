@@ -1,8 +1,10 @@
 # Переменные CI/CD (Settings -> CI/CD -> Variables), masked:
 #   REGISTRY           - docker-реестр с путём, без схемы: host[:port][/path]
-#                        (Nexus: nxs.praktikum-services.tech:5000, YCR: cr.yandex/<registry_id>)
-#   REGISTRY_USER      - логин (Nexus: свой; YCR: oauth)
-#   REGISTRY_PASSWORD  - пароль (Nexus: сгенерированный на /token; YCR: OAuth-токен)
+#                        (YCR: cr.yandex/<registry_id>)
+#   REGISTRY_USER      - логин (YCR с ключом сервисного аккаунта: json_key)
+#   REGISTRY_PASSWORD  - пароль/токен (если подходит masked-переменная)
+#   REGISTRY_PASSWORD_B64 - то же самое, но в base64 (для YCR: JSON-ключ сервисного
+#                        аккаунта, REGISTRY_USER=json_key). Если задана, имеет приоритет.
 
 stages:
   - test
@@ -59,7 +61,9 @@ check-registry:
   before_script:
     - mkdir -p /kaniko/.docker
     - |
-      AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_PASSWORD" | base64 | tr -d '\n')
+      PASS="$REGISTRY_PASSWORD"
+      if [ -n "$REGISTRY_PASSWORD_B64" ]; then PASS=$(printf '%s' "$REGISTRY_PASSWORD_B64" | base64 -d); fi
+      AUTH=$(printf '%s:%s' "$REGISTRY_USER" "$PASS" | base64 | tr -d '\n')
       printf '{"auths":{"%s":{"auth":"%s"}}}' "${REGISTRY%%/*}" "$AUTH" > /kaniko/.docker/config.json
 
 build-backend:

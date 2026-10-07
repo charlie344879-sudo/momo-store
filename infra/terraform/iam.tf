@@ -8,6 +8,7 @@ locals {
     "k8s.clusters.agent",
     "vpc.publicAdmin",
     "load-balancer.admin",
+    "container-registry.images.puller",
   ]
 }
 

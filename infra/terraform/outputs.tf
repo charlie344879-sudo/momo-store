@@ -9,3 +9,7 @@ output "static_bucket" {
 output "kubeconfig_command" {
   value = "yc managed-kubernetes cluster get-credentials ${yandex_kubernetes_cluster.momo.name} --external"
 }
+
+output "registry_id" {
+  value = yandex_container_registry.momo.id
+}

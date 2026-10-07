@@ -71,3 +71,4 @@ spec:
     - name: http
       port: 80
       targetPort: http
+  type: {{ .Values.frontend.service.type }}
