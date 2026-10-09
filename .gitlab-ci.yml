@@ -9,6 +9,7 @@
 stages:
   - test
   - build
+  - release
   - deploy
 
 variables:
@@ -86,11 +87,24 @@ build-frontend:
       --dockerfile "${CI_PROJECT_DIR}/frontend/Dockerfile"
       --destination "${REGISTRY}/momo-frontend:${VERSION}"
 
+# ---------- release ----------
+release:
+  stage: release
+  image: alpine:3.20
+  needs: [build-backend, build-frontend]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - apk add --no-cache helm
+    - printf '%s' "$REGISTRY_PASSWORD_B64" | base64 -d | helm registry login "${REGISTRY%%/*}" --username "$REGISTRY_USER" --password-stdin
+    - helm package charts/momo-store --version "$VERSION" --app-version "$VERSION" -d /tmp
+    - helm push "/tmp/momo-store-${VERSION}.tgz" "oci://${REGISTRY}/charts"
+
 # ---------- deploy ----------
 deploy:
   stage: deploy
   image: alpine:3.20
-  needs: [build-backend, build-frontend]
+  needs: [release]
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
@@ -99,10 +113,11 @@ deploy:
     - curl -sSL "https://storage.yandexcloud.net/yandexcloud-yc/release/${YC_VER}/linux/amd64/yc" -o /usr/local/bin/yc
     - chmod +x /usr/local/bin/yc
     - printf '%s' "$REGISTRY_PASSWORD_B64" | base64 -d > /tmp/key.json
+    - helm registry login "${REGISTRY%%/*}" --username "$REGISTRY_USER" --password-stdin < /tmp/key.json
     - yc config set service-account-key /tmp/key.json
     - yc managed-kubernetes cluster get-credentials --id "$CLUSTER_ID" --external
     - >
-      helm upgrade --install momo charts/momo-store
+      helm upgrade --install momo oci://${REGISTRY}/charts/momo-store --version ${VERSION}
       -n momo --create-namespace --atomic --timeout 5m
       --set backend.image.repository=${REGISTRY}/momo-backend
       --set backend.image.tag=${VERSION}
